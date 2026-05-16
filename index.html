@@ -86,8 +86,12 @@ async function loadData() {
   }
   document.getElementById("app").innerHTML = '<p class="loading">Łączę z API…</p>';
   try {
-    const url = API_URL + "?action=getAll&token=" + encodeURIComponent(token);
-    const res = await fetch(url);
+    // POST with text/plain = simple request, no CORS preflight, token in body (not URL)
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getAll", token: token })
+    });
     const data = await res.json();
     if (data.error) {
       showError(data.error + " — token jest błędny? Resetuj i wpisz ponownie.");
