@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Budzet — DEBUG</title>
+<style>
+  body { font-family: monospace; background: #fafafa; max-width: 800px; margin: 20px auto; padding: 16px; }
+  button { padding: 12px 20px; font-size: 14px; cursor: pointer; margin: 4px; }
+  input { padding: 8px; font-size: 14px; width: 100%; font-family: monospace; box-sizing: border-box; margin: 8px 0; }
+  pre { background: #fff; border: 1px solid #ccc; padding: 12px; white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 400px; overflow-y: auto; }
+  .ok { color: #27AE60; }
+  .err { color: #E8453C; }
+  .info { color: #2F80ED; }
+  h1 { font-size: 18px; }
+  small { color: #666; }
+</style>
+</head>
+<body>
+<h1>🔧 Debug strona — test POST do Apps Script</h1>
+<p><small>Ta strona nie używa localStorage. Token wpisujesz za każdym razem. Pełny output requestu poniżej.</small></p>
+
+<label>Token API (wklej tutaj):</label>
+<input type="password" id="token" placeholder="32 znaki..." />
+
+<div>
+  <button onclick="testGet()">Test 1: GET (jak działa otwarcie URL w nowej karcie)</button>
+  <button onclick="testPost()">Test 2: POST (jak działa apka — to powinno działać)</button>
+  <button onclick="clearLog()">Wyczyść log</button>
+</div>
+
+<h3>Log:</h3>
+<pre id="log">Wpisz token i kliknij przycisk testu.</pre>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycby2HRjFlNwDyOCwCUdDHkGoO25rvufvSl6BMRxzP6httx0IvB9E0sycs0VQSbYiwmk/exec";
+const logEl = document.getElementById("log");
+
+function log(msg, cls) {
+  const ts = new Date().toLocaleTimeString();
+  const cssClass = cls ? ` class="${cls}"` : "";
+  logEl.innerHTML += `\n[${ts}]<span${cssClass}> ${escapeHtml(msg)}</span>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function clearLog() { logEl.innerHTML = "Wyczyszczono."; }
+function getToken() {
+  const t = document.getElementById("token").value.trim();
+  if (!t) { log("❌ Wpisz token w pole powyzej.", "err"); return null; }
+  return t;
+}
+
+async function testGet() {
+  const token = getToken();
+  if (!token) return;
+  log("=== TEST GET ===", "info");
+  log("URL (token ukryty): " + API_URL + "?action=getAll&token=***");
+  try {
+    log("Wysylam GET...", "info");
+    const res = await fetch(API_URL + "?action=getAll&token=" + encodeURIComponent(token));
+    log("Status: " + res.status + " " + res.statusText, res.ok ? "ok" : "err");
+    log("Response headers:");
+    res.headers.forEach((v, k) => log("  " + k + ": " + v));
+    const txt = await res.text();
+    log("Response body (pierwsze 300 znakow):");
+    log(txt.substring(0, 300) + (txt.length > 300 ? "..." : ""));
+    log("✅ GET zakonczony", "ok");
+  } catch (e) {
+    log("❌ GET FAILED: " + e.name + ": " + e.message, "err");
+    log("Stack: " + e.stack);
+  }
+}
+
+async function testPost() {
+  const token = getToken();
+  if (!token) return;
+  log("=== TEST POST ===", "info");
+  log("URL: " + API_URL);
+  log("Body: {\"action\":\"getAll\",\"token\":\"***\"}");
+  try {
+    log("Wysylam POST...", "info");
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "getAll", token: token })
+    });
+    log("Status: " + res.status + " " + res.statusText, res.ok ? "ok" : "err");
+    log("Response headers:");
+    res.headers.forEach((v, k) => log("  " + k + ": " + v));
+    const txt = await res.text();
+    log("Response body (pierwsze 300 znakow):");
+    log(txt.substring(0, 300) + (txt.length > 300 ? "..." : ""));
+    log("✅ POST zakonczony", "ok");
+  } catch (e) {
+    log("❌ POST FAILED: " + e.name + ": " + e.message, "err");
+    log("Stack: " + e.stack);
+  }
+}
+</script>
+</body>
+</html>
