@@ -1,0 +1,17 @@
+{
+  "name": "Test PWA",
+  "short_name": "Test",
+  "description": "Moja pierwsza apka PWA",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F8F7F3",
+  "theme_color": "#27AE60",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
