@@ -3,20 +3,203 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Test PWA</title>
+<title>Budzet — test API</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <meta name="theme-color" content="#27AE60">
 <style>
-  body { font-family: -apple-system, sans-serif; background: #F8F7F3; color: #1a1a1a; max-width: 600px; margin: 60px auto; padding: 20px; text-align: center; }
-  h1 { font-size: 48px; margin: 0 0 10px; }
-  p { font-size: 18px; color: #666; }
-  .ok { color: #27AE60; font-weight: 700; font-size: 24px; margin-top: 30px; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #F8F7F3; color: #1a1a1a;
+    max-width: 640px; margin: 0 auto; padding: 24px 16px 60px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  h2 { font-size: 16px; margin: 0 0 12px; color: #555; }
+  .subtitle { color: #999; font-size: 12px; margin: 0 0 24px; }
+  .card {
+    background: #fff; border: 1px solid #e8e4dc; border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #f5f5f0;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: #666; font-size: 13px; }
+  .stat-val { font-weight: 800; font-size: 16px; }
+  .green { color: #27AE60; }
+  .red { color: #E8453C; }
+  .blue { color: #2F80ED; }
+  .grey { color: #888; }
+  button {
+    font-family: inherit; cursor: pointer;
+    padding: 10px 16px; border-radius: 8px;
+    border: 1px solid #ddd; background: #fff;
+    font-size: 13px; font-weight: 600;
+  }
+  button.danger { color: #c0736e; border-color: #f5c6c2; }
+  button:active { transform: scale(0.97); }
+  .loading { color: #999; font-style: italic; }
+  .error { color: #E8453C; background: #fde8e6; padding: 12px; border-radius: 8px; border: 1px solid #f5c6c2; }
+  .small { font-size: 11px; color: #999; }
+  .yr-bar { display: flex; gap: 6px; margin-bottom: 12px; }
+  .yr-btn {
+    flex: 1; padding: 6px; border-radius: 6px;
+    border: 1.5px solid #e8e4dc; background: #fff; color: #1a1a1a;
+    font-weight: 700;
+  }
+  .yr-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 </style>
 </head>
 <body>
-  <h1>🎯 To jest mój budget!</h1>
-  <p>To jest mój pierwszy test GitHub Pages.</p>
-  <p class="ok">✅ Działa!</p>
+<div id="app"><p class="loading">Ładowanie...</p></div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycby2HRjFlNwDyOCwCUdDHkGoO25rvufvSl6BMRxzP6httx0IvB9E0sycs0VQSbYiwmk/exec";
+const TOKEN_KEY = "budzet-token-v1";
+const ML = ["Sty","Lut","Mar","Kwi","Maj","Cze","Lip","Sie","Wrz","Paź","Lis","Gru"];
+
+let state = { data: null, selectedYear: 2026 };
+
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return "0";
+  return Math.round(n).toLocaleString("pl-PL");
+}
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+function setToken(t) {
+  localStorage.setItem(TOKEN_KEY, t);
+}
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+async function loadData() {
+  const token = getToken();
+  if (!token) {
+    promptForToken();
+    return;
+  }
+  document.getElementById("app").innerHTML = '<p class="loading">Łączę z API…</p>';
+  try {
+    const url = API_URL + "?action=getAll&token=" + encodeURIComponent(token);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) {
+      showError(data.error + " — token jest błędny? Resetuj i wpisz ponownie.");
+      return;
+    }
+    state.data = data;
+    render();
+  } catch (e) {
+    showError("Nie udało się połączyć: " + e.message);
+  }
+}
+
+function promptForToken() {
+  const t = prompt("Wpisz swój token API (jednorazowo na tym urządzeniu):");
+  if (!t || t.trim().length < 8) {
+    document.getElementById("app").innerHTML = '<p class="error">Brak/za krótki token. Odśwież stronę żeby spróbować ponownie.</p>';
+    return;
+  }
+  setToken(t.trim());
+  loadData();
+}
+
+function showError(msg) {
+  document.getElementById("app").innerHTML = `
+    <h1>❌ Błąd</h1>
+    <div class="error">${escapeHtml(msg)}</div>
+    <p style="margin-top:16px"><button class="danger" onclick="reset()">Resetuj token i spróbuj ponownie</button></p>
+  `;
+}
+
+function reset() {
+  clearToken();
+  location.reload();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render() {
+  const d = state.data;
+  const txs = d.transactions || [];
+  const plans = d.plans || [];
+
+  // Per-year stats
+  const years = {};
+  txs.forEach(t => {
+    const y = Number(t.rok);
+    if (!years[y]) years[y] = { count: 0, exp: 0, inc: 0 };
+    years[y].count++;
+    if (t.typ === "wydatek") years[y].exp += Number(t.kwota) || 0;
+    else if (t.typ === "przychod") years[y].inc += Number(t.kwota) || 0;
+  });
+
+  const sortedYears = Object.keys(years).map(Number).sort();
+  if (!years[state.selectedYear] && sortedYears.length) state.selectedYear = sortedYears[sortedYears.length - 1];
+
+  const selYear = years[state.selectedYear] || { count: 0, exp: 0, inc: 0 };
+
+  // Per-month for selected year
+  const months = Array(12).fill(0).map(() => ({ exp: 0, inc: 0, count: 0 }));
+  txs.filter(t => Number(t.rok) === state.selectedYear).forEach(t => {
+    const m = Number(t.miesiac) - 1;
+    if (m < 0 || m > 11) return;
+    months[m].count++;
+    if (t.typ === "wydatek") months[m].exp += Number(t.kwota) || 0;
+    else if (t.typ === "przychod") months[m].inc += Number(t.kwota) || 0;
+  });
+
+  document.getElementById("app").innerHTML = `
+    <h1>✅ Połączono z Budżetem</h1>
+    <p class="subtitle">API odpowiada • serwer: ${(d.serverTime || "").substring(0,19).replace("T"," ")}</p>
+
+    <div class="card">
+      <h2>📊 Co widać w Sheets</h2>
+      <div class="stat-row"><span class="stat-label">Transakcji łącznie</span><span class="stat-val blue">${fmt(txs.length)}</span></div>
+      <div class="stat-row"><span class="stat-label">Plany (wierszy)</span><span class="stat-val blue">${fmt(plans.length)}</span></div>
+      <div class="stat-row"><span class="stat-label">Lata w bazie</span><span class="stat-val">${sortedYears.join(", ") || "brak"}</span></div>
+    </div>
+
+    <div class="card">
+      <h2>📅 Rok</h2>
+      <div class="yr-bar">
+        ${sortedYears.map(y => `<button class="yr-btn ${y === state.selectedYear ? "active" : ""}" onclick="selectYear(${y})">${y}</button>`).join("")}
+      </div>
+      <div class="stat-row"><span class="stat-label">Transakcji</span><span class="stat-val">${fmt(selYear.count)}</span></div>
+      <div class="stat-row"><span class="stat-label">Przychody</span><span class="stat-val green">${fmt(selYear.inc)} zł</span></div>
+      <div class="stat-row"><span class="stat-label">Wydatki</span><span class="stat-val red">${fmt(selYear.exp)} zł</span></div>
+      <div class="stat-row"><span class="stat-label">Oszczędności</span><span class="stat-val ${selYear.inc-selYear.exp >= 0 ? 'green' : 'red'}">${fmt(selYear.inc - selYear.exp)} zł</span></div>
+    </div>
+
+    <div class="card">
+      <h2>📆 ${state.selectedYear} — miesiące</h2>
+      ${months.map((m, i) => `
+        <div class="stat-row">
+          <span class="stat-label">${ML[i]} <span class="small">(${m.count} tx)</span></span>
+          <span class="stat-val ${m.exp > 0 ? 'red' : 'grey'}">${m.exp > 0 ? fmt(m.exp) + " zł" : "—"}</span>
+        </div>
+      `).join("")}
+    </div>
+
+    <p style="text-align:center; margin-top:24px"><button class="danger" onclick="reset()">Resetuj token</button></p>
+    <p class="small" style="text-align:center; margin-top:8px">To jest test API. Pełna apka — wkrótce.</p>
+  `;
+}
+
+function selectYear(y) {
+  state.selectedYear = y;
+  render();
+}
+
+loadData();
+</script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
-  "name": "Test PWA",
-  "short_name": "Test",
-  "description": "Moja pierwsza apka PWA",
+  "name": "Budzet — test API",
+  "short_name": "Budzet",
+  "description": "Test połączenia apki z Google Sheets",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#F8F7F3",
